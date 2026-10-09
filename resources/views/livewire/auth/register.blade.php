@@ -52,6 +52,20 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <flux:input wire:model="email" id="email" label="{{ __('Email address') }}" type="email" name="email" required autocomplete="email" placeholder="email@example.com" />
         </div>
 
+        <!-- Access code -->
+        <div class="grid gap-2">
+            <flux:input
+                wire:model="password"
+                id="password"
+                label="{{ __('Access code') }}"
+                type="password"
+                name="password"
+                required
+                autocomplete="new-password"
+                placeholder="Access code"
+            />
+        </div>
+
         <!-- Password -->
         <div class="grid gap-2">
             <flux:input
