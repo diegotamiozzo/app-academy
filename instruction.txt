@@ -1,0 +1,213 @@
+==============================================================
+INSTRUCOES - CONTROLE DE ACESSO, ROLES E CODIGOS DE ACESSO
+Plataforma de cursos (Laravel)
+==============================================================
+
+
+1. VISAO GERAL
+--------------------------------------------------------------
+- A plataforma possui 3 perfis (roles): admin, instructor e user.
+- O cadastro de usuarios so e possivel com um CODIGO DE ACESSO.
+- Cada codigo de acesso e uma LICENCA individual, de uso unico,
+  comprada por uma empresa.
+- A empresa compra X licencas de "user" e/ou "instructor".
+- O codigo define a EMPRESA e a ROLE do usuario. Essas informacoes
+  nunca sao escolhidas pelo usuario no formulario de cadastro.
+
+
+2. ROLES E PERMISSOES
+--------------------------------------------------------------
+
+ADMIN (administrador da plataforma)
+  - Acesso total a plataforma.
+  - Gerencia empresas, compras de licencas e codigos de acesso.
+  - Visualiza e gerencia todos os usuarios, instrutores e cursos
+    de todas as empresas.
+  - NAO pertence a nenhuma empresa (company_id = null).
+  - NAO e criado por codigo de acesso: e criado via seeder ou
+    comando Artisan.
+
+INSTRUCTOR (instrutor)
+  - Pertence a uma empresa (company_id obrigatorio).
+  - Cria e gerencia o conteudo (cursos, modulos, aulas, materiais)
+    destinado aos colaboradores da PROPRIA empresa.
+  - Visualiza o progresso dos usuarios da propria empresa.
+  - Nao acessa dados de outras empresas.
+  - Nao gerencia licencas nem compras.
+
+USER (colaborador / aluno)
+  - Pertence a uma empresa (company_id obrigatorio).
+  - Apenas visualiza o material e realiza os cursos.
+  - Ve somente o conteudo publicado pela sua empresa.
+  - Nao cria, edita ou exclui conteudo.
+
+
+3. REGRAS DOS CODIGOS DE ACESSO (LICENCAS)
+--------------------------------------------------------------
+- 1 codigo = 1 licenca = 1 usuario.
+- O codigo NAO pode ser reutilizado (uso unico).
+- O codigo e gerado pelo admin da plataforma apos a compra da
+  empresa. Cada codigo nasce vinculado a:
+    * uma empresa (company_id)
+    * uma role (instructor ou user)
+    * uma compra (license_purchase_id)
+- Codigos de role "admin" NAO sao vendidos.
+- O codigo pode ter validade (expires_at).
+- O codigo nao utilizado pode ser revogado (revoked_at).
+- Formato sugerido: A1B2-C3D4-E5F6 (12 caracteres em 3 blocos).
+
+
+4. FLUXO DE CADASTRO
+--------------------------------------------------------------
+1. A empresa compra licencas (ex.: 50 de user + 2 de instructor).
+2. O admin registra a compra e o sistema gera um codigo por
+   licenca.
+3. Os codigos sao entregues a empresa, que repassa um para cada
+   colaborador.
+4. O colaborador acessa a tela de cadastro e informa:
+   nome, e-mail, senha e codigo de acesso.
+5. O sistema valida o codigo (dentro de uma transacao com lock):
+   - existe
+   - nao foi resgatado (redeemed_at nulo)
+   - nao foi revogado (revoked_at nulo)
+   - nao esta expirado
+6. Se valido, cria o usuario com company_id e role vindos do
+   codigo e marca o codigo como resgatado (user_id + redeemed_at).
+7. Se invalido, retorna uma mensagem GENERICA:
+   "Codigo de acesso invalido, expirado ou ja utilizado."
+
+
+5. ESTRUTURA DO BANCO DE DADOS
+--------------------------------------------------------------
+
+companies
+  id, name, document (CNPJ, unico, opcional), timestamps
+
+users
+  id
+  company_id      -> nullable (null apenas para admin da plataforma)
+  name, email (unico)
+  role            -> enum: admin | instructor | user
+  email_verified_at, password, remember_token, timestamps
+  indice: (company_id, role)
+
+license_purchases
+  id
+  company_id      -> empresa compradora
+  role            -> instructor | user
+  quantity        -> quantidade de licencas compradas
+  amount          -> valor (opcional)
+  purchased_at, timestamps
+
+access_codes
+  id
+  license_purchase_id
+  company_id
+  code            -> unico
+  role            -> instructor | user
+  user_id         -> nullable, UNICO (usuario que resgatou)
+  redeemed_at     -> data do resgate
+  expires_at      -> validade (opcional)
+  revoked_at      -> data da revogacao (opcional)
+  timestamps
+
+password_reset_tokens, sessions -> padrao do Laravel
+
+IMPORTANTE - AJUSTE NECESSARIO NA MIGRATION:
+Como o admin e da plataforma e nao pertence a empresa, altere em
+"users":
+
+    $table->foreignId('company_id')
+          ->nullable()
+          ->constrained()
+          ->nullOnDelete();
+
+E, em "access_codes", mantenha a role apenas com os valores que
+podem ser vendidos:
+
+    $table->enum('role', ['instructor', 'user']);
+
+
+6. CONTROLE DE ACESSO NA APLICACAO
+--------------------------------------------------------------
+
+6.1 Enum de roles (app/Enums/Role.php)
+
+    enum Role: string
+    {
+        case Admin = 'admin';
+        case Instructor = 'instructor';
+        case User = 'user';
+    }
+
+6.2 Cast no model User
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'role' => Role::class,
+        ];
+    }
+
+6.3 Middleware de role (exemplo)
+
+    public function handle($request, Closure $next, string ...$roles)
+    {
+        if (! $request->user() ||
+            ! in_array($request->user()->role->value, $roles)) {
+            abort(403);
+        }
+
+        return $next($request);
+    }
+
+    // Uso nas rotas
+    Route::middleware(['auth', 'role:admin'])
+        ->prefix('admin')->group(/* ... */);
+
+    Route::middleware(['auth', 'role:instructor'])
+        ->prefix('instructor')->group(/* ... */);
+
+    Route::middleware(['auth', 'role:user,instructor,admin'])
+        ->prefix('courses')->group(/* ... */);
+
+6.4 Isolamento por empresa (multi-tenant simples)
+    - Todo conteudo (cursos, modulos, aulas) deve ter company_id.
+    - Instrutor e user so enxergam registros com o company_id
+      da propria empresa.
+    - Admin ignora esse filtro.
+    - Sugestao: usar Policies e um Global Scope por company_id.
+
+
+7. SEGURANCA
+--------------------------------------------------------------
+- Nunca aceitar role ou company_id vindos do formulario.
+- Usar DB::transaction + lockForUpdate ao resgatar o codigo para
+  evitar uso simultaneo do mesmo codigo.
+- A coluna access_codes.user_id e unica: o banco impede que o
+  mesmo codigo gere dois usuarios.
+- Mensagem de erro unica para codigo inexistente, usado, revogado
+  ou expirado.
+- Aplicar throttle na rota de cadastro (ex.: throttle:5,1) para
+  evitar tentativas de forca bruta nos codigos.
+- Usar codigos aleatorios (Str::random) e nao sequenciais.
+- Criar o admin apenas via seeder/comando Artisan, com senha forte.
+
+
+8. PROXIMOS PASSOS SUGERIDOS
+--------------------------------------------------------------
+[ ] Ajustar migrations conforme o item 5
+[ ] Criar models: Company, LicensePurchase, AccessCode
+[ ] Criar Enum Role e cast no User
+[ ] Criar seeder do admin da plataforma
+[ ] Criar service/comando para gerar codigos a partir da compra
+[ ] Criar controller e view de cadastro com campo "codigo de acesso"
+[ ] Criar middleware de role e aplicar nas rotas
+[ ] Criar Policies/Global Scope por company_id
+[ ] Criar painel do admin (empresas, compras, codigos)
+[ ] Criar painel do instrutor (criacao de cursos e materiais)
+[ ] Criar area do aluno (visualizacao e realizacao de cursos)
+
+==============================================================

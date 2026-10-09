@@ -2,40 +2,35 @@
 
 ## Project snapshot
 
-This repository is a Laravel 12 web app for an online academy built from the official Livewire starter kit. It combines Laravel, Livewire Volt, Flux UI, Tailwind, and Vite, with a route-driven shell for authenticated pages, settings, and auth flows. The project is not a large MVC app with controllers for every feature; most interactive pages are single-file Volt components and Blade views.
+This repository is a Laravel 12 + Livewire 4 application for an online academy, built from the official Livewire starter kit. It uses Laravel's native auth, Volt single-file components, Flux UI, Tailwind, and Vite. Most app behavior is route-driven and lives in Blade/Volt files rather than a controller-heavy MVC structure.
 
 ## Build, test, and lint commands
 
-### Install dependencies
+### Initial setup
 
 ```bash
 composer install
 npm install
-```
-
-### Local setup
-
-```bash
 cp .env.example .env
 php artisan key:generate
 php artisan migrate
 ```
 
-If `database/database.sqlite` does not exist yet:
+If using SQLite locally and `database/database.sqlite` does not exist yet:
 
 ```bash
 touch database/database.sqlite
 ```
 
-### Run locally
+### Run the app locally
 
-The usual full local startup is:
+Use the project defaults for a full local stack:
 
 ```bash
 composer run dev
 ```
 
-This starts the Laravel app, queue worker, log watcher, and Vite dev server together. You can also run pieces separately:
+This starts the Laravel app, queue worker, log watcher, and Vite dev server together. If needed, run the pieces separately:
 
 ```bash
 php artisan serve
@@ -48,7 +43,7 @@ npm run dev
 npm run build
 ```
 
-### Test commands
+### Tests
 
 Run the full suite:
 
@@ -70,11 +65,13 @@ Run a single test by filter:
 
 ### Formatting / linting
 
+Format only changed PHP files:
+
 ```bash
 ./vendor/bin/pint --dirty --format agent
 ```
 
-To format the whole project instead of only dirty files:
+Format the whole project when needed:
 
 ```bash
 ./vendor/bin/pint --format agent
@@ -82,23 +79,22 @@ To format the whole project instead of only dirty files:
 
 ## High-level architecture
 
-- `bootstrap/app.php` is the Laravel 12 application bootstrap. It wires routing and middleware with the streamlined Laravel 11+ app structure.
-- `routes/web.php` defines the public landing page, the protected dashboard, and the settings routes for profile/password/appearance. The app shell is intentionally route-focused rather than controller-heavy.
-- `routes/auth.php` defines guest auth and password reset flows using `Livewire\Volt\Volt::route(...)`, plus verification and logout handling.
-- `app/Models/User.php` is the Eloquent user model. It handles auth data, password hashing, and the user initials helper used in the UI.
-- `app/Livewire/Actions/Logout.php` is the action class for the `logout` route and is the main custom action outside the Volt views.
-- `resources/views/` is the main source of behavior for pages and UI. `welcome.blade.php`, `dashboard.blade.php`, and the `components/` tree contain the app shell and reusable Blade blocks.
-- `resources/views/livewire/` and `resources/views/components/` are the first places to look for UI patterns, especially auth/settings flows and reusable components.
-- `vite.config.js` and `package.json` define the front-end toolchain; Vite is the expected asset pipeline, not a custom build step.
-- `tests/Pest.php` configures Pest to use `RefreshDatabase` for feature tests. The default local database is SQLite (`database/database.sqlite`).
+- `routes/web.php` and `routes/auth.php` are the primary entry points for app behavior. The shell is route-driven: public landing page, authenticated dashboard, and settings pages are defined here.
+- `Volt::route(...)` is used for auth and settings screens, so new interactive flows should usually be implemented as Livewire Volt components instead of controller actions.
+- `resources/views/` is the main source of UI and behavior: `welcome.blade.php`, `dashboard.blade.php`, `resources/views/components/`, and `resources/views/livewire/` hold the app's reusable UI patterns.
+- `app/Models/User.php` handles auth data and user helpers; it is not the main place for route or screen logic.
+- `app/Livewire/Actions/Logout.php` is the custom logout action used by the auth routes.
+- `bootstrap/app.php` and the streamlined Laravel 12 structure are the conventions here; there is no legacy `app/Http/Kernel.php` or `app/Console/Kernel.php`.
+- `vite.config.js`, `package.json`, and the Tailwind/Flux setup define the front-end pipeline; Vite is the expected asset build system.
+- The default local database is SQLite (`database/database.sqlite`), which is the typical dev setup for this starter kit.
 
 ## Key conventions
 
-- This project follows Laravel 12 conventions rather than older app structure patterns. There is no legacy `app/Http/Kernel.php` or `app/Console/Kernel.php`.
-- Prefer `Volt` single-file Livewire components for interactive screens and features; match surrounding patterns in `resources/views/components` and `resources/views/livewire` before introducing new UI structure.
-- Keep auth and route guards in `routes/web.php` and `routes/auth.php` instead of re-implementing access checks in Blade or component logic.
-- Use named routes and redirects (`route(...)`, `->name(...)`) consistently when navigating between areas of the app.
-- Reuse the existing app shell and component conventions (dashboard/settings layout, auth header, logo, placeholder patterns) instead of creating a different UI system.
-- Treat `routes/` and `resources/views/` as the primary source of app behavior; models are used mainly for persistence and auth, not as the main place for screen logic.
-- If a change impacts front-end assets, validate with `npm run build`. If it impacts auth, authorization, or app flow, validate the relevant Pest tests instead of relying only on static inspection.
-- The repo is configured for Laravel Boost and includes AI helper files and skills for Copilot sessions; keep changes aligned with the starter-kit conventions already in place.
+- Follow the Laravel 12 starter-kit structure and existing app patterns before introducing new abstractions.
+- Prefer Volt single-file Livewire components for interactive screens and features; match the surrounding component conventions in `resources/views/components` and `resources/views/livewire` before creating new UI structure.
+- Keep route guards and authentication logic in `routes/web.php` and `routes/auth.php` instead of reimplementing checks in Blade or component logic.
+- Use named routes and redirects (`route(...)`, `->name(...)`) consistently when navigating between sections of the app.
+- Reuse the existing dashboard/settings shell, auth header, and component patterns instead of creating a separate UI system.
+- Treat `routes/` and `resources/views/` as the primary source of behavior; models are mainly for persistence and auth support, not page logic.
+- If the change affects front-end assets or styles, validate with `npm run build`. If it affects auth, authorization, or app flow, validate the relevant Pest tests.
+- This repository includes Laravel Boost/AI guidance and skills; keep changes aligned with the starter-kit conventions already in place.
