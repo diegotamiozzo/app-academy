@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="flex min-h-screen flex-col bg-white text-zinc-800 antialiased dark:bg-zinc-800 dark:text-zinc-100">
-        <header class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <header class="sticky top-0 z-40 border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-6">
                 <a href="{{ route('home') }}" aria-label="Optimize Academy — início">
                     <x-app-logo class="h-auto w-28 text-zinc-900 dark:text-white sm:w-40" />
@@ -43,12 +43,12 @@
             </div>
         </header>
 
-        <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6">
+        <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 pb-20 sm:pb-0">
             <section class="max-w-3xl py-20 sm:py-28" aria-labelledby="academy-title">
                 <p class="mb-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">Seu próximo passo começa aqui</p>
                 <h1 id="academy-title" class="text-4xl leading-tight font-semibold tracking-tight text-zinc-900 sm:text-5xl dark:text-white">
                     Optimize Academy
-                    <span class="block text-zinc-600 dark:text-zinc-300">Conhecimento que move você.</span>
+                    <span class="block text-zinc-600 dark:text-zinc-300">Conhecimento que move você!</span>
                 </h1>
                 <p class="mt-6 max-w-2xl text-base leading-7 text-zinc-600 sm:text-lg dark:text-zinc-300">
                     Cursos e capacitação online para desenvolver novas habilidades e abrir novas possibilidades na sua jornada profissional.
@@ -112,12 +112,10 @@
             </section>
         </main>
 
-        <footer class="border-t border-zinc-200 py-6 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            <div class="mx-auto w-full max-w-7xl px-6">
-                <p>&copy; {{ date('Y') }} Optimize Academy Todos os direitos reservados.</p>
-            </div>
-        </footer>
+        <x-footer />
 
         @fluxScripts
+
+        <x-whatsapp-button />
     </body>
 </html>
