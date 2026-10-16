@@ -2,40 +2,35 @@
 
 ## Project snapshot
 
-This repository is a Laravel 12 web app for an online academy built from the official Livewire starter kit. It combines Laravel, Livewire Volt, Flux UI, Tailwind, and Vite, with a route-driven shell for authenticated pages, settings, and auth flows. The project is not a large MVC app with controllers for every feature; most interactive pages are single-file Volt components and Blade views.
+This repository is a Laravel 12 + Livewire 4 application for an online academy, built from the official Livewire starter kit. It uses Laravel's native auth, Volt single-file components, Flux UI, Tailwind, and Vite. Most app behavior is route-driven and lives in Blade/Volt files rather than a controller-heavy MVC structure.
 
 ## Build, test, and lint commands
 
-### Install dependencies
+### Initial setup
 
 ```bash
 composer install
 npm install
-```
-
-### Local setup
-
-```bash
 cp .env.example .env
 php artisan key:generate
 php artisan migrate
 ```
 
-If `database/database.sqlite` does not exist yet:
+If using SQLite locally and `database/database.sqlite` does not exist yet, create it before running migrations:
 
 ```bash
 touch database/database.sqlite
 ```
 
-### Run locally
+### Run the app locally
 
-The usual full local startup is:
+Use the project defaults for a full local stack:
 
 ```bash
 composer run dev
 ```
 
-This starts the Laravel app, queue worker, log watcher, and Vite dev server together. You can also run pieces separately:
+This starts the Laravel app, queue worker, log watcher, and Vite dev server together. If needed, run the pieces separately:
 
 ```bash
 php artisan serve
@@ -48,57 +43,51 @@ npm run dev
 npm run build
 ```
 
-### Test commands
+### Tests
 
-Run the full suite:
+Run the full Pest suite:
 
 ```bash
-php artisan test --compact
+php artisan test
 ```
 
-Run a single file:
+Run one test file or a filtered test:
 
 ```bash
-./vendor/bin/pest tests/Feature/<Name>.php
-```
-
-Run a single test by filter:
-
-```bash
-./vendor/bin/pest tests/Feature/<Name>.php --filter="<test name>"
+php artisan test tests/Feature/AccessControlTest.php
+php artisan test tests/Feature/AccessControlTest.php --filter="redeems access codes"
 ```
 
 ### Formatting / linting
 
-```bash
-./vendor/bin/pint --dirty --format agent
-```
-
-To format the whole project instead of only dirty files:
+Format PHP with Pint:
 
 ```bash
-./vendor/bin/pint --format agent
+./vendor/bin/pint
 ```
+
+CI also builds frontend assets with `npm run build`; run it after changing frontend assets or styles. The test workflow runs `./vendor/bin/pest`, and the quality workflow runs Pint.
 
 ## High-level architecture
 
-- `bootstrap/app.php` is the Laravel 12 application bootstrap. It wires routing and middleware with the streamlined Laravel 11+ app structure.
-- `routes/web.php` defines the public landing page, the protected dashboard, and the settings routes for profile/password/appearance. The app shell is intentionally route-focused rather than controller-heavy.
-- `routes/auth.php` defines guest auth and password reset flows using `Livewire\Volt\Volt::route(...)`, plus verification and logout handling.
-- `app/Models/User.php` is the Eloquent user model. It handles auth data, password hashing, and the user initials helper used in the UI.
-- `app/Livewire/Actions/Logout.php` is the action class for the `logout` route and is the main custom action outside the Volt views.
-- `resources/views/` is the main source of behavior for pages and UI. `welcome.blade.php`, `dashboard.blade.php`, and the `components/` tree contain the app shell and reusable Blade blocks.
-- `resources/views/livewire/` and `resources/views/components/` are the first places to look for UI patterns, especially auth/settings flows and reusable components.
-- `vite.config.js` and `package.json` define the front-end toolchain; Vite is the expected asset pipeline, not a custom build step.
-- `tests/Pest.php` configures Pest to use `RefreshDatabase` for feature tests. The default local database is SQLite (`database/database.sqlite`).
+- `routes/web.php` defines the landing page and role-specific dashboards; `routes/auth.php` maps authentication endpoints. Most page behavior is route-driven, with dashboard data passed into Blade views.
+- Authentication and settings screens use Volt single-file components under `resources/views/livewire/auth/` and `resources/views/livewire/settings/`. Their PHP component class and Blade template live in the same file. Shared Blade components and layouts are under `resources/views/components/`.
+- The academy domain is organized around companies, license purchases, access codes, and users. `User` stores a `Role` enum value and belongs to a company; access-code redemption assigns the user's company and role.
+- Laravel 12 application setup is in `bootstrap/app.php` and `bootstrap/providers.php`. Route middleware aliases are registered in `bootstrap/app.php`; there is no `app/Http/Kernel.php`.
+- Vite builds the frontend from `resources/css/app.css` and the configured JavaScript entry points. Tailwind and Flux styles are wired through the CSS entry point.
+- SQLite is the configured default for local setup and the in-memory database used by Pest tests.
 
 ## Key conventions
 
-- This project follows Laravel 12 conventions rather than older app structure patterns. There is no legacy `app/Http/Kernel.php` or `app/Console/Kernel.php`.
-- Prefer `Volt` single-file Livewire components for interactive screens and features; match surrounding patterns in `resources/views/components` and `resources/views/livewire` before introducing new UI structure.
-- Keep auth and route guards in `routes/web.php` and `routes/auth.php` instead of re-implementing access checks in Blade or component logic.
-- Use named routes and redirects (`route(...)`, `->name(...)`) consistently when navigating between areas of the app.
-- Reuse the existing app shell and component conventions (dashboard/settings layout, auth header, logo, placeholder patterns) instead of creating a different UI system.
-- Treat `routes/` and `resources/views/` as the primary source of app behavior; models are used mainly for persistence and auth, not as the main place for screen logic.
-- If a change impacts front-end assets, validate with `npm run build`. If it impacts auth, authorization, or app flow, validate the relevant Pest tests instead of relying only on static inspection.
-- The repo is configured for Laravel Boost and includes AI helper files and skills for Copilot sessions; keep changes aligned with the starter-kit conventions already in place.
+- Use the existing route-driven and Volt patterns for pages. Keep named route names and redirects consistent with the role dashboards and settings routes.
+- The `dashboard` route redirects according to `App\Enums\Role`; protect role-specific pages with the `role` middleware alias and do not rely only on hiding links in the UI.
+- Keep access-code redemption logic centralized in `App\Models\AccessCode::redeemForUser()`. It updates the user and code within a transaction and locks the selected code; changes to signup or redemption should preserve that atomic flow.
+- Reuse the existing application/auth layouts, Blade components, and Flux UI components. For styles, follow the Tailwind CSS setup in `resources/css/app.css`.
+- Check the relevant project guidance under `.github/skills/` before changing Laravel, Volt, Flux, Tailwind, or Pest code. Confirm package versions from `composer.json` or `package.json` when relying on version-specific APIs.
+- For PHP behavior changes, run the relevant Pest tests; for frontend changes, run `npm run build`. Run `./vendor/bin/pint` for PHP formatting.
+
+## Current feature plan
+
+`PLANO-CONTEUDO-INSTRUTOR.md` is the design source for the instructor course-content feature. The MVP for Phases 1–4 has been implemented. The confirmed decisions are: course material is available immediately; every module requires Slides; instructors edit only courses they created; access is granted only to same-company users; all modules are open; progress tracking is deferred; and Google Drive uses the MVP link/embed model, not Phase 6 service-account protection.
+
+For this feature, persist extracted Google Slides, YouTube, and Drive IDs rather than submitted URLs. `App\Services\CourseLinkParser` validates domains and IDs, then constructs embed URLs. `Course` and `CourseModule` use the `BelongsToCompany` global scope; the admin bypasses it, and unauthenticated CLI, seeder, and job queries must explicitly use `withoutGlobalScope(CompanyScope::class)` when they need cross-company data. Enforce course visibility through published status, company membership, explicit `course_user` access, and `CoursePolicy`; never trust submitted company or role values. Embedded public content uses iframe sandboxing to block pop-ups and top-level navigation. PDF downloads go through `CourseMaterialDownloadController`, which checks authorization and the course download flag, then streams the PDF through the platform. These controls keep normal playback and downloads within the app, but do not make public provider files private; anyone who obtains a public ID can still open it directly.
