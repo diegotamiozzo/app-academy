@@ -8,20 +8,18 @@
             </p>
         </header>
 
-        <div class="grid gap-4 md:grid-cols-2">
-            <flux:card>
-                <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Meus cursos</h2>
-                <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    Os cursos disponibilizados pela sua empresa aparecerão aqui.
-                </p>
-            </flux:card>
-
-            <flux:card>
-                <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Meu progresso</h2>
-                <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    Acompanhe suas aulas concluídas e continue de onde parou.
-                </p>
-            </flux:card>
-        </div>
+        <flux:card>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-1">
+                    <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Meus cursos</h2>
+                    <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                        Acesse os cursos publicados e liberados para você.
+                    </p>
+                </div>
+                <flux:button variant="primary" :href="route('user.courses.index')" wire:navigate>
+                    Ver cursos
+                </flux:button>
+            </div>
+        </flux:card>
     </div>
 </x-layouts.app>

@@ -7,6 +7,7 @@ use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -62,6 +63,17 @@ class User extends Authenticatable // implements MustVerifyEmail
     public function accessCodes(): HasMany
     {
         return $this->hasMany(AccessCode::class);
+    }
+
+    public function createdCourses(): HasMany
+    {
+        return $this->hasMany(Course::class, 'created_by');
+    }
+
+    public function accessibleCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class)
+            ->withPivot(['granted_by', 'granted_at']);
     }
 
     /**

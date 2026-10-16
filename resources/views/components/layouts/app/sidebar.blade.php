@@ -14,6 +14,11 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group heading="Platform" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard', 'admin', 'instructor.dashboard', 'user.dashboard')" wire:navigate>Dashboard</flux:navlist.item>
+                    @if (auth()->user()->role === \App\Enums\Role::Instructor)
+                        <flux:navlist.item icon="book-open-text" :href="route('instructor.courses.index')" :current="request()->routeIs('instructor.courses.*')" wire:navigate>Cursos</flux:navlist.item>
+                    @elseif (auth()->user()->role === \App\Enums\Role::User)
+                        <flux:navlist.item icon="book-open-text" :href="route('user.courses.index')" :current="request()->routeIs('user.courses.*')" wire:navigate>Meus cursos</flux:navlist.item>
+                    @endif
                 </flux:navlist.group>
             </flux:navlist>
 

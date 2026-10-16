@@ -26,4 +26,9 @@ class Company extends Model
     {
         return $this->hasMany(AccessCode::class);
     }
+
+    public function courses(): HasMany
+    {
+        return $this->hasMany(Course::class);
+    }
 }
